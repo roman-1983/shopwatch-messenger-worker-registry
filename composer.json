@@ -1,0 +1,37 @@
+{
+    "name": "roman-1983/messenger-worker-registry",
+    "description": "Worker registry for Symfony Messenger — track running workers, transports, and message stats via console",
+    "type": "symfony-bundle",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Roman Allenstein",
+            "email": "mail@roman-allenstein.de"
+        }
+    ],
+    "keywords": ["symfony", "messenger", "worker", "registry", "monitoring"],
+    "homepage": "https://github.com/roman-1983/shopwatch-messenger-worker-registry",
+    "require": {
+        "php": ">=8.2",
+        "symfony/messenger": "^7.0|^8.0",
+        "symfony/console": "^7.0|^8.0",
+        "symfony/cache": "^7.0|^8.0",
+        "symfony/event-dispatcher": "^7.0|^8.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0|^12.0|^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "ShopWatch\\MessengerWorkerRegistry\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ShopWatch\\MessengerWorkerRegistry\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

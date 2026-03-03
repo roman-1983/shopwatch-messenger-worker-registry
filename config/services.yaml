@@ -1,0 +1,20 @@
+services:
+    ShopWatch\MessengerWorkerRegistry\WorkerRegistry:
+        arguments:
+            $cache: '@cache.app'
+
+    ShopWatch\MessengerWorkerRegistry\EventSubscriber\WorkerRegistrySubscriber:
+        arguments:
+            $registry: '@ShopWatch\MessengerWorkerRegistry\WorkerRegistry'
+        tags:
+            - { name: kernel.event_listener, event: Symfony\Component\Messenger\Event\WorkerStartedEvent, method: onWorkerStarted }
+            - { name: kernel.event_listener, event: Symfony\Component\Messenger\Event\WorkerRunningEvent, method: onWorkerRunning }
+            - { name: kernel.event_listener, event: Symfony\Component\Messenger\Event\WorkerStoppedEvent, method: onWorkerStopped }
+            - { name: kernel.event_listener, event: Symfony\Component\Messenger\Event\WorkerMessageReceivedEvent, method: onMessageReceived }
+            - { name: kernel.event_listener, event: Symfony\Component\Messenger\Event\WorkerMessageHandledEvent, method: onMessageHandled }
+            - { name: kernel.event_listener, event: Symfony\Component\Messenger\Event\WorkerMessageFailedEvent, method: onMessageFailed }
+
+    ShopWatch\MessengerWorkerRegistry\Command\WorkerRegistryListCommand:
+        arguments:
+            $registry: '@ShopWatch\MessengerWorkerRegistry\WorkerRegistry'
+        tags: ['console.command']
