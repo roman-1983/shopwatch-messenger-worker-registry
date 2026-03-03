@@ -2,6 +2,7 @@ services:
     ShopWatch\MessengerWorkerRegistry\WorkerRegistry:
         arguments:
             $cache: '@cache.app'
+            $ttlSeconds: 120
 
     ShopWatch\MessengerWorkerRegistry\EventSubscriber\WorkerRegistrySubscriber:
         arguments:

@@ -4,6 +4,7 @@ namespace ShopWatch\MessengerWorkerRegistry\Command;
 
 use ShopWatch\MessengerWorkerRegistry\WorkerEntry;
 use ShopWatch\MessengerWorkerRegistry\WorkerRegistry;
+use ShopWatch\MessengerWorkerRegistry\WorkerStatus;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -50,13 +51,22 @@ final class WorkerRegistryListCommand extends Command
         }
 
         $now = new \DateTimeImmutable();
-        $this->renderTable($io, $entries, $now);
+        $ttl = $this->registry->getTtlSeconds();
+
+        $this->renderTable($io, $entries, $now, $ttl);
 
         if ($detail) {
             $this->renderDetail($io, $entries);
         }
 
-        $io->success(\count($entries) . ' worker(s) active');
+        $running = \count(array_filter($entries, fn (WorkerEntry $e) => $e->getStatus($ttl, $now) === WorkerStatus::Running));
+        $total = \count($entries);
+
+        if ($running === $total) {
+            $io->success(sprintf('%d worker(s) running', $total));
+        } else {
+            $io->success(sprintf('%d worker(s) registered (%d running, %d stopped/dead)', $total, $running, $total - $running));
+        }
 
         return Command::SUCCESS;
     }
@@ -64,12 +74,14 @@ final class WorkerRegistryListCommand extends Command
     /**
      * @param WorkerEntry[] $entries
      */
-    private function renderTable(SymfonyStyle $io, array $entries, \DateTimeImmutable $now): void
+    private function renderTable(SymfonyStyle $io, array $entries, \DateTimeImmutable $now, int $ttl): void
     {
         $rows = [];
         foreach ($entries as $entry) {
             $rows[] = [
                 substr($entry->id, 0, 8),
+                $this->formatStatus($entry->getStatus($ttl, $now)),
+                $entry->hostname ?: '-',
                 implode(', ', $entry->transportNames),
                 $this->formatRelativeTime($entry->startedAt, $now),
                 $this->formatRelativeTime($entry->lastActiveAt, $now),
@@ -79,7 +91,7 @@ final class WorkerRegistryListCommand extends Command
         }
 
         $io->table(
-            ['ID', 'Transports', 'Started', 'Last Active', 'Handled', 'Failed'],
+            ['ID', 'Status', 'Host', 'Transports', 'Started', 'Last Active', 'Handled', 'Failed'],
             $rows,
         );
     }
@@ -124,9 +136,14 @@ final class WorkerRegistryListCommand extends Command
      */
     private function renderJson(OutputInterface $output, array $entries, bool $detail): int
     {
-        $data = array_map(function (WorkerEntry $e) use ($detail) {
+        $ttl = $this->registry->getTtlSeconds();
+        $now = new \DateTimeImmutable();
+
+        $data = array_map(function (WorkerEntry $e) use ($detail, $ttl, $now) {
             $item = [
                 'id' => $e->id,
+                'status' => $e->getStatus($ttl, $now)->value,
+                'hostname' => $e->hostname,
                 'transports' => $e->transportNames,
                 'started_at' => $e->startedAt->format('c'),
                 'last_active_at' => $e->lastActiveAt->format('c'),
@@ -153,6 +170,15 @@ final class WorkerRegistryListCommand extends Command
         $output->writeln(json_encode($data, \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR));
 
         return Command::SUCCESS;
+    }
+
+    private function formatStatus(WorkerStatus $status): string
+    {
+        return match ($status) {
+            WorkerStatus::Running => '<fg=green>running</>',
+            WorkerStatus::Stopped => '<fg=yellow>stopped</>',
+            WorkerStatus::Dead => '<fg=red>dead</>',
+        };
     }
 
     private function formatRelativeTime(\DateTimeImmutable $time, \DateTimeImmutable $now): string

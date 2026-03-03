@@ -8,18 +8,23 @@ final class WorkerRegistry
 {
     private const INDEX_KEY = 'messenger_worker_index';
     private const ENTRY_PREFIX = 'messenger_worker_';
-    private const TTL_SECONDS = 120;
 
     public function __construct(
         private readonly CacheItemPoolInterface $cache,
+        private readonly int $ttlSeconds = 120,
     ) {
+    }
+
+    public function getTtlSeconds(): int
+    {
+        return $this->ttlSeconds;
     }
 
     public function register(WorkerEntry $entry): void
     {
         $item = $this->cache->getItem(self::ENTRY_PREFIX . $entry->id);
         $item->set($entry);
-        $item->expiresAfter(self::TTL_SECONDS);
+        $item->expiresAfter($this->ttlSeconds * 2);
         $this->cache->save($item);
 
         $this->addToIndex($entry->id);
@@ -37,7 +42,7 @@ final class WorkerRegistry
         $entry->lastActiveAt = new \DateTimeImmutable();
 
         $item->set($entry);
-        $item->expiresAfter(self::TTL_SECONDS);
+        $item->expiresAfter($this->ttlSeconds * 2);
         $this->cache->save($item);
     }
 
@@ -59,14 +64,24 @@ final class WorkerRegistry
         $entry->lastActiveAt = new \DateTimeImmutable();
 
         $item->set($entry);
-        $item->expiresAfter(self::TTL_SECONDS);
+        $item->expiresAfter($this->ttlSeconds * 2);
         $this->cache->save($item);
     }
 
     public function unregister(string $workerId): void
     {
-        $this->cache->deleteItem(self::ENTRY_PREFIX . $workerId);
-        $this->removeFromIndex($workerId);
+        $item = $this->cache->getItem(self::ENTRY_PREFIX . $workerId);
+
+        if (!$item->isHit()) {
+            return;
+        }
+
+        $entry = $item->get();
+        $entry->stoppedAt = new \DateTimeImmutable();
+
+        $item->set($entry);
+        $item->expiresAfter($this->ttlSeconds);
+        $this->cache->save($item);
     }
 
     /**
@@ -107,18 +122,6 @@ final class WorkerRegistry
         if (!\in_array($workerId, $ids, true)) {
             $ids[] = $workerId;
         }
-
-        $item->set($ids);
-        $item->expiresAfter(null);
-        $this->cache->save($item);
-    }
-
-    private function removeFromIndex(string $workerId): void
-    {
-        $item = $this->cache->getItem(self::INDEX_KEY);
-        $ids = $item->isHit() ? $item->get() : [];
-
-        $ids = array_values(array_filter($ids, fn (string $id) => $id !== $workerId));
 
         $item->set($ids);
         $item->expiresAfter(null);

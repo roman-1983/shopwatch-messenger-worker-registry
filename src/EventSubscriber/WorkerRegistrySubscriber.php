@@ -46,6 +46,7 @@ final class WorkerRegistrySubscriber
             transportNames: $event->getWorker()->getMetadata()->getTransportNames(),
             startedAt: $now,
             lastActiveAt: $now,
+            hostname: (string) gethostname(),
         );
 
         $this->registry->register($entry);

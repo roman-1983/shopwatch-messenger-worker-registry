@@ -5,6 +5,7 @@ namespace ShopWatch\MessengerWorkerRegistry\Tests;
 use PHPUnit\Framework\TestCase;
 use ShopWatch\MessengerWorkerRegistry\EventSubscriber\WorkerRegistrySubscriber;
 use ShopWatch\MessengerWorkerRegistry\WorkerRegistry;
+use ShopWatch\MessengerWorkerRegistry\WorkerStatus;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
@@ -59,14 +60,28 @@ class WorkerRegistrySubscriberTest extends TestCase
         $this->assertSame(['high', 'medium'], $entries[0]->transportNames);
     }
 
-    public function testWorkerStoppedUnregistersEntry(): void
+    public function testWorkerStartedSetsHostname(): void
+    {
+        $worker = $this->createWorkerMock();
+        $this->subscriber->onWorkerStarted(new WorkerStartedEvent($worker));
+
+        $entries = $this->registry->getAll();
+        $this->assertNotEmpty($entries[0]->hostname);
+        $this->assertSame((string) gethostname(), $entries[0]->hostname);
+    }
+
+    public function testWorkerStoppedMarksAsStopped(): void
     {
         $worker = $this->createWorkerMock();
         $this->subscriber->onWorkerStarted(new WorkerStartedEvent($worker));
         $this->assertCount(1, $this->registry->getAll());
 
         $this->subscriber->onWorkerStopped(new WorkerStoppedEvent($worker));
-        $this->assertCount(0, $this->registry->getAll());
+
+        $entries = $this->registry->getAll();
+        $this->assertCount(1, $entries);
+        $this->assertNotNull($entries[0]->stoppedAt);
+        $this->assertSame(WorkerStatus::Stopped, $entries[0]->getStatus(120));
     }
 
     public function testMessageHandledIncrementsCounter(): void

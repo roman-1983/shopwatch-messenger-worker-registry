@@ -5,13 +5,14 @@ namespace ShopWatch\MessengerWorkerRegistry\Tests;
 use PHPUnit\Framework\TestCase;
 use ShopWatch\MessengerWorkerRegistry\WorkerEntry;
 use ShopWatch\MessengerWorkerRegistry\WorkerRegistry;
+use ShopWatch\MessengerWorkerRegistry\WorkerStatus;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 class WorkerRegistryTest extends TestCase
 {
-    private function createRegistry(): WorkerRegistry
+    private function createRegistry(int $ttl = 120): WorkerRegistry
     {
-        return new WorkerRegistry(new ArrayAdapter());
+        return new WorkerRegistry(new ArrayAdapter(), $ttl);
     }
 
     private function createEntry(string $id = 'abc123', array $transports = ['high']): WorkerEntry
@@ -50,7 +51,7 @@ class WorkerRegistryTest extends TestCase
         $this->assertCount(3, $registry->getAll());
     }
 
-    public function testUnregister(): void
+    public function testUnregisterMarksAsStopped(): void
     {
         $registry = $this->createRegistry();
 
@@ -59,8 +60,11 @@ class WorkerRegistryTest extends TestCase
         $registry->unregister('w1');
 
         $all = $registry->getAll();
-        $this->assertCount(1, $all);
-        $this->assertSame('w2', $all[0]->id);
+        $this->assertCount(2, $all);
+
+        $w1 = array_values(array_filter($all, fn (WorkerEntry $e) => $e->id === 'w1'))[0];
+        $this->assertNotNull($w1->stoppedAt);
+        $this->assertSame(WorkerStatus::Stopped, $w1->getStatus(120));
     }
 
     public function testHeartbeatUpdatesLastActiveAt(): void
@@ -129,5 +133,75 @@ class WorkerRegistryTest extends TestCase
         $registry->register($entry);
 
         $this->assertCount(1, $registry->getAll());
+    }
+
+    public function testGetTtlSeconds(): void
+    {
+        $registry = $this->createRegistry(60);
+        $this->assertSame(60, $registry->getTtlSeconds());
+    }
+
+    public function testDefaultTtl(): void
+    {
+        $registry = new WorkerRegistry(new ArrayAdapter());
+        $this->assertSame(120, $registry->getTtlSeconds());
+    }
+
+    public function testWorkerStatusRunning(): void
+    {
+        $registry = $this->createRegistry();
+        $registry->register($this->createEntry('w1'));
+
+        $all = $registry->getAll();
+        $this->assertSame(WorkerStatus::Running, $all[0]->getStatus(120));
+    }
+
+    public function testWorkerStatusDead(): void
+    {
+        $now = new \DateTimeImmutable();
+        $pastTime = $now->modify('-200 seconds');
+
+        $entry = new WorkerEntry(
+            id: 'w1',
+            transportNames: ['high'],
+            startedAt: $pastTime,
+            lastActiveAt: $pastTime,
+        );
+
+        $this->assertSame(WorkerStatus::Dead, $entry->getStatus(120, $now));
+    }
+
+    public function testWorkerStatusStopped(): void
+    {
+        $now = new \DateTimeImmutable();
+
+        $entry = new WorkerEntry(
+            id: 'w1',
+            transportNames: ['high'],
+            startedAt: $now,
+            lastActiveAt: $now,
+            stoppedAt: $now,
+        );
+
+        $this->assertSame(WorkerStatus::Stopped, $entry->getStatus(120, $now));
+    }
+
+    public function testHostnamePreserved(): void
+    {
+        $registry = $this->createRegistry();
+        $now = new \DateTimeImmutable();
+
+        $entry = new WorkerEntry(
+            id: 'w1',
+            transportNames: ['high'],
+            startedAt: $now,
+            lastActiveAt: $now,
+            hostname: 'web-01',
+        );
+
+        $registry->register($entry);
+
+        $all = $registry->getAll();
+        $this->assertSame('web-01', $all[0]->hostname);
     }
 }

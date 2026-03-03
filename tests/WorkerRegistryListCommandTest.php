@@ -40,19 +40,70 @@ class WorkerRegistryListCommandTest extends TestCase
         $this->assertStringContainsString('abcd1234', $display);
         $this->assertStringContainsString('high, medium', $display);
         $this->assertStringContainsString('42', $display);
-        $this->assertStringContainsString('2 worker(s) active', $display);
+        $this->assertStringContainsString('running', $display);
+        $this->assertStringContainsString('2 worker(s) running', $display);
+    }
+
+    public function testListShowsStatusColumn(): void
+    {
+        $now = new \DateTimeImmutable();
+        $this->registry->register(new WorkerEntry('w1', ['high'], $now, $now));
+
+        $this->tester->execute([]);
+        $display = $this->tester->getDisplay();
+
+        $this->assertStringContainsString('Status', $display);
+        $this->assertStringContainsString('running', $display);
+    }
+
+    public function testListShowsHostColumn(): void
+    {
+        $now = new \DateTimeImmutable();
+        $this->registry->register(new WorkerEntry('w1', ['high'], $now, $now, hostname: 'web-01'));
+
+        $this->tester->execute([]);
+        $display = $this->tester->getDisplay();
+
+        $this->assertStringContainsString('Host', $display);
+        $this->assertStringContainsString('web-01', $display);
+    }
+
+    public function testListShowsStoppedWorker(): void
+    {
+        $now = new \DateTimeImmutable();
+        $this->registry->register(new WorkerEntry('w1', ['high'], $now, $now));
+        $this->registry->unregister('w1');
+
+        $this->tester->execute([]);
+        $display = $this->tester->getDisplay();
+
+        $this->assertStringContainsString('stopped', $display);
+    }
+
+    public function testListShowsDeadWorker(): void
+    {
+        $now = new \DateTimeImmutable();
+        $pastTime = $now->modify('-200 seconds');
+        $this->registry->register(new WorkerEntry('w1', ['high'], $pastTime, $pastTime));
+
+        $this->tester->execute([]);
+        $display = $this->tester->getDisplay();
+
+        $this->assertStringContainsString('dead', $display);
     }
 
     public function testJsonFormat(): void
     {
         $now = new \DateTimeImmutable();
-        $this->registry->register(new WorkerEntry('w1', ['high'], $now, $now, 10, 2));
+        $this->registry->register(new WorkerEntry('w1', ['high'], $now, $now, 10, 2, hostname: 'web-01'));
 
         $this->tester->execute(['--format' => 'json']);
         $output = json_decode($this->tester->getDisplay(), true);
 
         $this->assertCount(1, $output);
         $this->assertSame('w1', $output[0]['id']);
+        $this->assertSame('running', $output[0]['status']);
+        $this->assertSame('web-01', $output[0]['hostname']);
         $this->assertSame(['high'], $output[0]['transports']);
         $this->assertSame(10, $output[0]['messages_handled']);
         $this->assertSame(2, $output[0]['messages_failed']);
@@ -93,5 +144,18 @@ class WorkerRegistryListCommandTest extends TestCase
         $this->assertSame(5, $stats['count']);
         $this->assertEquals(500.0, $stats['avg_ms']);
         $this->assertEquals(2500.0, $stats['total_ms']);
+    }
+
+    public function testSummaryShowsMixedStatuses(): void
+    {
+        $now = new \DateTimeImmutable();
+        $this->registry->register(new WorkerEntry('w1', ['high'], $now, $now));
+        $this->registry->register(new WorkerEntry('w2', ['low'], $now, $now));
+        $this->registry->unregister('w2');
+
+        $this->tester->execute([]);
+        $display = $this->tester->getDisplay();
+
+        $this->assertStringContainsString('2 worker(s) registered (1 running, 1 stopped/dead)', $display);
     }
 }
