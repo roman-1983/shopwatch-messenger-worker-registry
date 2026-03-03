@@ -52,20 +52,7 @@ That's it. No configuration needed — the defaults work out of the box.
 bin/console messenger:worker:list
 ```
 
-```
- Worker Registry
- ===============
-
- ---------- --------- -------- ------------------------------------- --------- ----------- --------- --------
-  ID         Status    Host     Transports                            Started   Last Active  Handled   Failed
- ---------- --------- -------- ------------------------------------- --------- ----------- --------- --------
-  a3f21b8e   running   web-01   scheduler_uptime, high, medium        2min ago  5s ago       142       0
-  b7c1d9e4   running   web-02   low                                   2min ago  12s ago      8         1
-  d9e4f2a1   dead      web-02   low                                   5min ago  3min ago     7         0
- ---------- --------- -------- ------------------------------------- --------- ----------- --------- --------
-
- 3 worker(s) registered (2 running, 1 stopped/dead)
-```
+![messenger:worker:list](docs/worker-list.png)
 
 ### Worker Status
 
@@ -85,17 +72,7 @@ Stopped workers remain visible for 1x TTL after shutdown. Dead workers remain vi
 bin/console messenger:worker:list --detail
 ```
 
-Shows an additional breakdown per worker:
-
-```
- Worker a3f21b8e — Message Stats:
- ---------------------- ------- -------- ---------- ------------
-  Message                Count   Failed   Avg Time   Total Time
- ---------------------- ------- -------- ---------- ------------
-  CheckUptimeMessage     120     0        198ms      23.8s
-  FetchHtmlMessage       22      1        1.2s       26.4s
- ---------------------- ------- -------- ---------- ------------
-```
+![messenger:worker:list --detail](docs/worker-detail.png)
 
 ### JSON Output
 
