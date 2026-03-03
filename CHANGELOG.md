@@ -19,6 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Configurable TTL via bundle configuration (`messenger_worker_registry.ttl`)
 - Symfony DependencyInjection Extension and Configuration classes
 - `getTtlSeconds()` getter on `WorkerRegistry`
+- Terminal screenshots in README (`docs/worker-list.png`, `docs/worker-detail.png`)
+- GitHub Actions QA workflow (PHP 8.2/8.3/8.4 × prefer-lowest/prefer-stable)
 
 ### Changed
 
@@ -26,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Cache TTL extended to 2x configured value; workers become "dead" after 1x TTL
 - Stopped workers expire from cache after 1x TTL
 - Console summary line now shows status breakdown when mixed statuses exist
+- Test suite expanded from 24 to 36 tests
 
 ## [1.0.0] - 2026-03-03
 
