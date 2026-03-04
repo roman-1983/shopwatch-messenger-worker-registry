@@ -1,14 +1,13 @@
-# Messenger Worker Registry
+Messenger Worker Registry
+=========================
 
-A Symfony bundle that provides real-time visibility into your Symfony Messenger workers. Track running workers, their transports, message throughput, failure rates, and per-message-type performance — all via a simple console command.
+The Messenger Worker Registry component provides real-time visibility into your
+Symfony Messenger workers. Track running workers, their transports, message
+throughput, failure rates, and per-message-type performance — all via a simple
+console command.
 
-## The Problem
-
-Symfony Messenger has no built-in way to see which workers are currently running. When you start `messenger:consume`, there's no registry, no dashboard, no way to answer: _How many workers are active? Which transports are being consumed? How many messages has each worker processed?_
-
-This bundle solves that by hooking into Messenger's event system and maintaining a worker registry in Symfony's cache.
-
-## Features
+Features
+--------
 
 - **Zero configuration** — install the bundle and it just works
 - **Automatic registration** — workers register themselves on startup via event listeners
@@ -21,12 +20,14 @@ This bundle solves that by hooking into Messenger's event system and maintaining
 - **Console command** — `messenger:worker:list` with table and JSON output
 - **No external dependencies** — uses Symfony's built-in PSR-6 cache (filesystem, Redis, APCu — whatever you have configured)
 
-## Requirements
+Requirements
+------------
 
 - PHP 8.2+
 - Symfony 7.0+ or 8.0+
 
-## Installation
+Installation
+------------
 
 ```bash
 composer require roman-1983/messenger-worker-registry
@@ -44,7 +45,8 @@ return [
 
 That's it. No configuration needed — the defaults work out of the box.
 
-## Usage
+Usage
+-----
 
 ### List Running Workers
 
@@ -64,7 +66,9 @@ Each worker has one of three statuses:
 | `stopped` | Worker shut down gracefully via `WorkerStoppedEvent` |
 | `dead` | Worker crashed — no heartbeat received for longer than TTL |
 
-Stopped workers remain visible for 1x TTL after shutdown. Dead workers remain visible for 2x TTL after their last heartbeat, then expire from the cache automatically.
+Stopped workers remain visible for 1x TTL after shutdown. Dead workers remain
+visible for 2x TTL after their last heartbeat, then expire from the cache
+automatically.
 
 ### Detailed View with Per-Message Stats
 
@@ -108,7 +112,8 @@ Returns a JSON array for programmatic consumption:
 
 The `message_stats` key is only included when using `--detail`.
 
-## How It Works
+How It Works
+------------
 
 The bundle listens to Symfony Messenger's built-in worker events:
 
@@ -123,19 +128,34 @@ The bundle listens to Symfony Messenger's built-in worker events:
 
 ### TTL and Worker Lifecycle
 
-Each worker entry is stored with a cache TTL of **2x the configured TTL** (default: 240 seconds). The heartbeat (fired every 30 seconds) resets this TTL on each cycle.
+Each worker entry is stored with a cache TTL of **2x the configured TTL**
+(default: 240 seconds). The heartbeat (fired every 30 seconds) resets this TTL
+on each cycle.
 
-- **Running**: Heartbeat keeps the entry alive. Status is "running" as long as `lastActiveAt` is within 1x TTL.
-- **Crashed**: If a worker crashes without triggering `WorkerStoppedEvent`, its `lastActiveAt` goes stale. After 1x TTL it shows as "dead". After 2x TTL the cache entry expires automatically.
-- **Graceful stop**: `WorkerStoppedEvent` sets `stoppedAt` and saves the entry with 1x TTL. It shows as "stopped" until it expires.
+- **Running**: Heartbeat keeps the entry alive. Status is "running" as long as
+  `lastActiveAt` is within 1x TTL.
+- **Crashed**: If a worker crashes without triggering `WorkerStoppedEvent`, its
+  `lastActiveAt` goes stale. After 1x TTL it shows as "dead". After 2x TTL the
+  cache entry expires automatically.
+- **Graceful stop**: `WorkerStoppedEvent` sets `stoppedAt` and saves the entry
+  with 1x TTL. It shows as "stopped" until it expires.
 
 ### Storage
 
-The bundle uses Symfony's `cache.app` pool by default. This means it works out of the box with whatever cache adapter you have configured (filesystem, Redis, Memcached, APCu). For multi-server setups, make sure your cache adapter is shared (e.g., Redis).
+The bundle uses Symfony's `cache.app` pool by default. This means it works out
+of the box with whatever cache adapter you have configured (filesystem, Redis,
+Memcached, APCu). For multi-server setups, make sure your cache adapter is
+shared (e.g., Redis).
 
-> **Docker / multi-container note:** If your web server and workers run in separate containers with the default filesystem cache adapter, they each have an isolated filesystem. Workers will register themselves, but the web container won't see them. To fix this, either mount a **shared volume** on the cache directory (e.g., `/app/var/share`) across all containers, or switch to a shared cache adapter like Redis.
+> **Docker / multi-container note:** If your web server and workers run in
+> separate containers with the default filesystem cache adapter, they each have
+> an isolated filesystem. Workers will register themselves, but the web container
+> won't see them. To fix this, either mount a **shared volume** on the cache
+> directory (e.g., `/app/var/share`) across all containers, or switch to a shared
+> cache adapter like Redis.
 
-## Configuration
+Configuration
+-------------
 
 The bundle works without any configuration. You can optionally customize the TTL:
 
@@ -145,7 +165,8 @@ messenger_worker_registry:
     ttl: 120  # seconds (default: 120, minimum: 10)
 ```
 
-To use a dedicated cache pool instead of `cache.app`, override the service definition:
+To use a dedicated cache pool instead of `cache.app`, override the service
+definition:
 
 ```yaml
 # config/services.yaml
@@ -155,13 +176,22 @@ services:
             $cache: '@cache.pool.worker_registry'
 ```
 
-## Testing
+Testing
+-------
 
 ```bash
 composer install
 vendor/bin/phpunit
 ```
 
-## License
+Resources
+---------
+
+ * [Contributing](CONTRIBUTING.md)
+ * [Report issues](https://github.com/roman-1983/messenger-worker-registry/issues) and
+   [send Pull Requests](https://github.com/roman-1983/messenger-worker-registry/pulls) please.
+
+License
+-------
 
 MIT License. See [LICENSE](LICENSE) for details.
