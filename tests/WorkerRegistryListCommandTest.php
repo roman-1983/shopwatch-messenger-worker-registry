@@ -25,7 +25,11 @@ class WorkerRegistryListCommandTest extends TestCase
     {
         $this->tester->execute([]);
 
-        $this->assertStringContainsString('No workers are currently registered', $this->tester->getDisplay());
+        $display = $this->tester->getDisplay();
+
+        $this->assertStringContainsString('No workers are currently registered', $display);
+        $this->assertStringContainsString('shared cache volume', $display);
+        $this->assertStringContainsString('github.com/roman-1983/messenger-worker-registry#storage', $display);
     }
 
     public function testListShowsRegisteredWorkers(): void

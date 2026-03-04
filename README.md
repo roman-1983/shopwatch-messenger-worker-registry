@@ -133,6 +133,8 @@ Each worker entry is stored with a cache TTL of **2x the configured TTL** (defau
 
 The bundle uses Symfony's `cache.app` pool by default. This means it works out of the box with whatever cache adapter you have configured (filesystem, Redis, Memcached, APCu). For multi-server setups, make sure your cache adapter is shared (e.g., Redis).
 
+> **Docker / multi-container note:** If your web server and workers run in separate containers with the default filesystem cache adapter, they each have an isolated filesystem. Workers will register themselves, but the web container won't see them. To fix this, either mount a **shared volume** on the cache directory (e.g., `/app/var/share`) across all containers, or switch to a shared cache adapter like Redis.
+
 ## Configuration
 
 The bundle works without any configuration. You can optionally customize the TTL:

@@ -46,6 +46,8 @@ final class WorkerRegistryListCommand extends Command
 
         if (\count($entries) === 0) {
             $io->info('No workers are currently registered.');
+            $io->text('Using Docker? Workers in separate containers need a shared cache volume.');
+            $io->text('See: https://github.com/roman-1983/messenger-worker-registry#storage');
 
             return Command::SUCCESS;
         }
