@@ -1,0 +1,186 @@
+{% extends '@WebProfiler/Profiler/layout.html.twig' %}
+
+{% block toolbar %}
+    {% set status_color = collector.dead > 0 ? 'red' : (collector.running > 0 ? '' : 'yellow') %}
+
+    {% set icon %}
+        <span class="icon">
+            {{ include('@MessengerWorkerRegistry/data_collector/icon.svg') }}
+        </span>
+        <span class="sf-toolbar-value">{{ collector.running }}</span>
+        <span class="sf-toolbar-label">Workers</span>
+    {% endset %}
+
+    {% set text %}
+        <div class="sf-toolbar-info-piece">
+            <b>Running</b>
+            <span class="sf-toolbar-status sf-toolbar-status-green">{{ collector.running }}</span>
+        </div>
+        {% if collector.stopped > 0 %}
+            <div class="sf-toolbar-info-piece">
+                <b>Stopped</b>
+                <span class="sf-toolbar-status sf-toolbar-status-yellow">{{ collector.stopped }}</span>
+            </div>
+        {% endif %}
+        {% if collector.dead > 0 %}
+            <div class="sf-toolbar-info-piece">
+                <b>Dead</b>
+                <span class="sf-toolbar-status sf-toolbar-status-red">{{ collector.dead }}</span>
+            </div>
+        {% endif %}
+        <div class="sf-toolbar-info-piece">
+            <b>Handled</b>
+            <span>{{ collector.totalHandled }}</span>
+        </div>
+        {% if collector.totalFailed > 0 %}
+            <div class="sf-toolbar-info-piece">
+                <b>Failed</b>
+                <span class="sf-toolbar-status sf-toolbar-status-red">{{ collector.totalFailed }}</span>
+            </div>
+        {% endif %}
+    {% endset %}
+
+    {{ include('@WebProfiler/Profiler/toolbar_item.html.twig', { link: profiler_url, status: status_color }) }}
+{% endblock %}
+
+{% block menu %}
+    <span class="label {{ collector.dead > 0 ? 'label-status-error' : '' }}">
+        <span class="icon">
+            {{ include('@MessengerWorkerRegistry/data_collector/icon.svg') }}
+        </span>
+        <strong>Workers</strong>
+        {% if collector.dead > 0 %}
+            <span class="count">
+                <span>{{ collector.dead }}</span>
+            </span>
+        {% endif %}
+    </span>
+{% endblock %}
+
+{% block panel %}
+    <h2>Messenger Workers</h2>
+
+    <div class="metrics">
+        <div class="metric-group">
+            <div class="metric">
+                <span class="value">{{ collector.running }}</span>
+                <span class="label">Running</span>
+            </div>
+            <div class="metric">
+                <span class="value">{{ collector.stopped }}</span>
+                <span class="label">Stopped</span>
+            </div>
+            <div class="metric">
+                <span class="value">{{ collector.dead }}</span>
+                <span class="label">Dead</span>
+            </div>
+        </div>
+        <div class="metric-group">
+            <div class="metric">
+                <span class="value">{{ collector.totalHandled }}</span>
+                <span class="label">Handled</span>
+            </div>
+            <div class="metric">
+                <span class="value">{{ collector.totalFailed }}</span>
+                <span class="label">Failed</span>
+            </div>
+            <div class="metric">
+                <span class="value">{{ collector.ttl }}s</span>
+                <span class="label">TTL</span>
+            </div>
+        </div>
+    </div>
+
+    {% if collector.workers|length == 0 %}
+        <div class="empty">
+            <p>No workers registered.</p>
+        </div>
+    {% else %}
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Status</th>
+                    <th>Hostname</th>
+                    <th>Transports</th>
+                    <th>Started</th>
+                    <th>Last Active</th>
+                    <th>Handled</th>
+                    <th>Failed</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for worker in collector.workers %}
+                    <tr>
+                        <td class="font-normal text-small text-bold">{{ worker.id[:8] }}</td>
+                        <td>
+                            {% if worker.status == 'running' %}
+                                <span class="label status-success">running</span>
+                            {% elseif worker.status == 'stopped' %}
+                                <span class="label status-warning">stopped</span>
+                            {% else %}
+                                <span class="label status-error">dead</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ worker.hostname }}</td>
+                        <td>
+                            {% for transport in worker.transports %}
+                                <span class="label">{{ transport }}</span>{{ not loop.last ? ' ' }}
+                            {% endfor %}
+                        </td>
+                        <td class="text-small">{{ worker.startedAt }}</td>
+                        <td class="text-small">{{ worker.lastActiveAt }}</td>
+                        <td class="text-right">{{ worker.messagesHandled }}</td>
+                        <td class="text-right">
+                            {% if worker.messagesFailed > 0 %}
+                                <span class="label status-error">{{ worker.messagesFailed }}</span>
+                            {% else %}
+                                {{ worker.messagesFailed }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if worker.messageStats|length > 0 %}
+                        <tr>
+                            <td colspan="8" style="padding: 0;">
+                                <table style="margin: 0; background: var(--table-header); border: none;">
+                                    <thead>
+                                        <tr>
+                                            <th style="padding-left: 2em;">Message Type</th>
+                                            <th class="text-right">Count</th>
+                                            <th class="text-right">Failed</th>
+                                            <th class="text-right">Total Time</th>
+                                            <th class="text-right">Avg Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for messageType, stats in worker.messageStats %}
+                                            <tr>
+                                                <td style="padding-left: 2em;" class="font-normal">{{ messageType }}</td>
+                                                <td class="text-right">{{ stats.count }}</td>
+                                                <td class="text-right">
+                                                    {% if stats.failed > 0 %}
+                                                        <span class="label status-error">{{ stats.failed }}</span>
+                                                    {% else %}
+                                                        {{ stats.failed }}
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-right">{{ '%.1f'|format(stats.totalMs) }} ms</td>
+                                                <td class="text-right">
+                                                    {% if stats.count > 0 %}
+                                                        {{ '%.1f'|format(stats.totalMs / stats.count) }} ms
+                                                    {% else %}
+                                                        -
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+{% endblock %}

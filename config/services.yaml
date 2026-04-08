@@ -19,3 +19,11 @@ services:
         arguments:
             $registry: '@ShopWatch\MessengerWorkerRegistry\WorkerRegistry'
         tags: ['console.command']
+
+    ShopWatch\MessengerWorkerRegistry\DataCollector\MessengerWorkerDataCollector:
+        arguments:
+            $registry: '@ShopWatch\MessengerWorkerRegistry\WorkerRegistry'
+        tags:
+            - name: data_collector
+              template: '@MessengerWorkerRegistry/data_collector/messenger_workers.html.twig'
+              id: messenger_workers
