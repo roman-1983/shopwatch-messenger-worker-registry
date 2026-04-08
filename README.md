@@ -181,8 +181,16 @@ shared (e.g., Redis).
 Configuration
 -------------
 
-The bundle works without any configuration. You can optionally customize the TTL
-and cache pool:
+**Zero configuration** — the bundle works out of the box. It uses Symfony's
+`cache.app` pool (typically filesystem) and a default TTL of 120 seconds.
+No Redis, no database, no external services required.
+
+> **Important:** Workers and your web application **must share the same cache**.
+> Workers write their status to the cache, and the web app (console command,
+> profiler panel) reads from it. If they use separate cache pools or isolated
+> filesystems, the registry will appear empty.
+
+You can optionally customize the TTL and cache pool:
 
 ```yaml
 # config/packages/messenger_worker_registry.yaml
@@ -191,7 +199,9 @@ messenger_worker_registry:
     cache: cache.app  # cache pool service ID (default: cache.app)
 ```
 
-To use a dedicated cache pool, define it and reference it in the bundle config:
+If you need a dedicated cache pool (e.g., to use a different adapter or
+separate the worker data from your application cache), define one and reference
+it:
 
 ```yaml
 # config/packages/cache.yaml
@@ -199,7 +209,7 @@ framework:
     cache:
         pools:
             cache.worker_registry:
-                adapter: cache.adapter.redis
+                adapter: cache.adapter.filesystem
 
 # config/packages/messenger_worker_registry.yaml
 messenger_worker_registry:
