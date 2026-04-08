@@ -1,5 +1,21 @@
 {% extends '@WebProfiler/Profiler/layout.html.twig' %}
 
+{% macro time_ago(timestamp) %}
+    {%- set now = "now"|date("U") -%}
+    {%- set diff = now - timestamp -%}
+    {%- if diff < 5 -%}
+        just now
+    {%- elseif diff < 60 -%}
+        {{ diff }}s ago
+    {%- elseif diff < 3600 -%}
+        {{ (diff / 60)|round(0, 'floor') }}m {{ diff % 60 }}s ago
+    {%- elseif diff < 86400 -%}
+        {{ (diff / 3600)|round(0, 'floor') }}h {{ ((diff % 3600) / 60)|round(0, 'floor') }}m ago
+    {%- else -%}
+        {{ (diff / 86400)|round(0, 'floor') }}d {{ ((diff % 86400) / 3600)|round(0, 'floor') }}h ago
+    {%- endif -%}
+{% endmacro %}
+
 {% block toolbar %}
     {% set status_color = collector.dead > 0 ? 'red' : (collector.running > 0 ? '' : 'yellow') %}
 
@@ -128,8 +144,8 @@
                                 <span class="label">{{ transport }}</span>{{ not loop.last ? ' ' }}
                             {% endfor %}
                         </td>
-                        <td class="text-small">{{ worker.startedAt }}</td>
-                        <td class="text-small">{{ worker.lastActiveAt }}</td>
+                        <td class="text-small" title="{{ worker.startedAt|date('Y-m-d H:i:s') }}">{{ _self.time_ago(worker.startedAt) }}</td>
+                        <td class="text-small" title="{{ worker.lastActiveAt|date('Y-m-d H:i:s') }}">{{ _self.time_ago(worker.lastActiveAt) }}</td>
                         <td class="text-right">{{ worker.messagesHandled }}</td>
                         <td class="text-right">
                             {% if worker.messagesFailed > 0 %}

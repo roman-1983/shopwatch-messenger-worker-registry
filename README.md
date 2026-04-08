@@ -18,6 +18,8 @@ Features
 - **Message counters** — track handled and failed messages per worker
 - **Per-message-type stats** — see count, failure rate, and average processing time per message class
 - **Console command** — `messenger:worker:list` with table and JSON output
+- **Web Debug Toolbar** — see worker count and status at a glance in the Symfony profiler
+- **Configurable cache pool** — use any PSR-6 cache pool instead of the default `cache.app`
 - **No external dependencies** — uses Symfony's built-in PSR-6 cache (filesystem, Redis, APCu — whatever you have configured)
 
 Requirements
@@ -112,6 +114,28 @@ Returns a JSON array for programmatic consumption:
 
 The `message_stats` key is only included when using `--detail`.
 
+Web Debug Toolbar
+-----------------
+
+When `symfony/web-profiler-bundle` is installed, the bundle automatically adds a
+toolbar item showing the number of running workers. The toolbar icon turns **red**
+when dead workers are detected, and **yellow** when no workers are running.
+
+![Web Debug Toolbar](docs/toolbar.png)
+
+Click the toolbar item to open the full profiler panel with:
+
+- Summary metrics (running / stopped / dead counts, handled / failed totals, TTL)
+- Worker table with status, hostname, transports, relative timestamps, and
+  message counters
+- Per-message-type breakdown with count, failure rate, total and average
+  processing time
+
+No extra configuration is needed — the data collector is registered
+automatically.
+
+![Profiler Panel](docs/profiler-panel.png)
+
 How It Works
 ------------
 
@@ -157,23 +181,29 @@ shared (e.g., Redis).
 Configuration
 -------------
 
-The bundle works without any configuration. You can optionally customize the TTL:
+The bundle works without any configuration. You can optionally customize the TTL
+and cache pool:
 
 ```yaml
 # config/packages/messenger_worker_registry.yaml
 messenger_worker_registry:
-    ttl: 120  # seconds (default: 120, minimum: 10)
+    ttl: 120          # seconds (default: 120, minimum: 10)
+    cache: cache.app  # cache pool service ID (default: cache.app)
 ```
 
-To use a dedicated cache pool instead of `cache.app`, override the service
-definition:
+To use a dedicated cache pool, define it and reference it in the bundle config:
 
 ```yaml
-# config/services.yaml
-services:
-    ShopWatch\MessengerWorkerRegistry\WorkerRegistry:
-        arguments:
-            $cache: '@cache.pool.worker_registry'
+# config/packages/cache.yaml
+framework:
+    cache:
+        pools:
+            cache.worker_registry:
+                adapter: cache.adapter.redis
+
+# config/packages/messenger_worker_registry.yaml
+messenger_worker_registry:
+    cache: cache.worker_registry
 ```
 
 Testing

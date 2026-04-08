@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-04-08
+
+### Added
+
+- Symfony Web Debug Toolbar and Profiler panel integration
+- `MessengerWorkerDataCollector` showing worker status, counts, and per-message-type stats
+- Toolbar icon with color indicators: red for dead workers, yellow when no workers are running
+- Full profiler panel with worker table and nested message-type breakdown
+- Relative time display in profiler panel (e.g. "5m 30s ago") with absolute timestamps on hover
+- Configurable `cache` option to use a custom cache pool instead of `cache.app`
+- Unit tests for `MessengerWorkerDataCollector` (14 tests)
+- `symfony/framework-bundle` as dev dependency for DataCollector tests
+
+### Changed
+
+- `MessengerWorkerRegistryBundle::getPath()` overridden to resolve templates from the package root
+- Bundle configuration extended with `cache` option (default: `cache.app`)
+- Extension reads `cache` config and replaces the cache argument via `Reference`
+- Profiler panel timestamps changed from absolute to relative format
+
 ## [1.1.0] - 2026-03-04
 
 ### Added
