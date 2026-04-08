@@ -18,6 +18,10 @@ final class Configuration implements ConfigurationInterface
                     ->min(10)
                     ->info('TTL in seconds before a worker is considered dead (default: 120)')
                 ->end()
+                ->scalarNode('cache')
+                    ->defaultValue('cache.app')
+                    ->info('Cache pool service ID to use for worker registry storage')
+                ->end()
             ->end();
 
         return $treeBuilder;

@@ -6,6 +6,7 @@ use ShopWatch\MessengerWorkerRegistry\WorkerRegistry;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
+use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 
 final class MessengerWorkerRegistryExtension extends Extension
@@ -18,7 +19,8 @@ final class MessengerWorkerRegistryExtension extends Extension
         $loader = new YamlFileLoader($container, new FileLocator(__DIR__ . '/../../config'));
         $loader->load('services.yaml');
 
-        $container->getDefinition(WorkerRegistry::class)
-            ->replaceArgument('$ttlSeconds', $config['ttl']);
+        $definition = $container->getDefinition(WorkerRegistry::class);
+        $definition->replaceArgument('$ttlSeconds', $config['ttl']);
+        $definition->replaceArgument('$cache', new Reference($config['cache']));
     }
 }
